@@ -10,6 +10,7 @@ export default class UserManager {
   addUser(name, socket) {
     this.users.push({ name, socket });
     this.queue.push(socket.id);
+    this.initHandlers(socket);
     this.clearQueue();
   }
 
@@ -30,7 +31,23 @@ export default class UserManager {
     console.log("creating room");
 
     this.room.createRoom(user1, user2);
-
     this.clearQueue();
+  }
+
+  initHandlers(socket) {
+    socket.on("negotiation-needed", ({ roomId }) => {
+      this.room.onNegotiationNeeded(roomId, socket);
+    });
+    socket.on("offer", ({ sdp, roomId }) => {
+      this.room.onOffer(roomId, sdp, socket);
+    });
+
+    socket.on("answer", ({ sdp, roomId }) => {
+      this.room.onAnswer(roomId, sdp, socket);
+    });
+
+    socket.on("add-ice-candidate", ({ candidate, roomId }) => {
+      this.room.onIceCandidates(roomId, candidate, socket);
+    });
   }
 }

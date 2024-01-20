@@ -56,6 +56,6 @@ const Home = () => {
       </div>
     );
   }
-  return <Room name={name} localAudioTrack={audioTrack} localVideoTrack={videoTrack} />;
+  return <Room localName={name} localAudioTrack={audioTrack} localVideoTrack={videoTrack} />;
 };
 export default Home;
