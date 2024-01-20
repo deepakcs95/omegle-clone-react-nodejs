@@ -9,8 +9,11 @@ export default class RoomManager {
     const roomId = this.generateRoomId();
     this.room.set(roomId, { user1, user2 });
 
-    user1.socket.emit("send-offer", roomId);
-    user2.socket.emit("send-offer", roomId);
+    const name1 = user1.name;
+    const name2 = user2.name;
+
+    user1.socket.emit("send-offer", { roomId, name: name2 });
+    user2.socket.emit("send-offer", { roomId, name: name1 });
   }
 
   generateRoomId() {
