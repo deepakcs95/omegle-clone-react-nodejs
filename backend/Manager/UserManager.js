@@ -35,7 +35,7 @@ export default class UserManager {
   }
 
   initHandlers(socket) {
-    socket.on("negotiation-needed", ({ roomId }) => {
+    socket.on("on-negotiation-needed", ({ roomId }) => {
       this.room.onNegotiationNeeded(roomId, socket);
     });
     socket.on("offer", ({ sdp, roomId }) => {
@@ -46,8 +46,8 @@ export default class UserManager {
       this.room.onAnswer(roomId, sdp, socket);
     });
 
-    socket.on("add-ice-candidate", ({ candidate, roomId }) => {
-      this.room.onIceCandidates(roomId, candidate, socket);
+    socket.on("add-ice-candidate", ({ candidate, roomId, type }) => {
+      this.room.onIceCandidates(roomId, candidate, type, socket);
     });
   }
 }
