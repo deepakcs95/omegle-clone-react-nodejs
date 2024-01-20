@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import io from "socket.io-client";
 
-const Room = ({ localName, localAudioTrack, localVideoTrack }) => {
+const Room = ({ localName, localStream, localAudioTrack, localVideoTrack }) => {
   const [senderPC, setSenderPC] = useState(null);
   const [recieverPC, setRecieverPC] = useState(null);
 
@@ -16,16 +16,21 @@ const Room = ({ localName, localAudioTrack, localVideoTrack }) => {
       const pc = new RTCPeerConnection();
 
       setSenderPC(pc);
-      if (localVideoTrack) {
-        console.error("video tack");
-        //  console.log(localVideoTrack);
-        pc.addTrack(localVideoTrack);
-      }
-      if (localAudioTrack) {
-        console.error("audio tack");
-        //  console.log(localAudioTrack);
-        pc.addTrack(localAudioTrack);
-      }
+      // if (localVideoTrack) {
+      //   console.error("video tack");
+      //   //  console.log(localVideoTrack);
+      //   pc.addTrack(localVideoTrack);
+      // }
+      // if (localAudioTrack) {
+      //   console.error("audio tack");
+      //   //  console.log(localAudioTrack);
+      //   pc.addTrack(localAudioTrack);
+      // }
+
+      localStream.getTracks().forEach(function (track) {
+        console.log(track);
+        pc.addTrack(track, localStream);
+      });
 
       pc.onicecandidate = (e) => {
         if (!e.candidate) {
@@ -69,7 +74,16 @@ const Room = ({ localName, localAudioTrack, localVideoTrack }) => {
         console.log("track recivived");
       };
 
-      pc.onconnectionstatechange = (e) => console.log("remote", e.currentTarget.connectionState);
+      pc.onconnectionstatechange = (e) => {
+        console.log("remote", e.currentTarget.connectionState);
+        pc.getTransceivers().forEach((tranceiver) => {
+          if (tranceiver.receiver.track.kind === "audio") {
+            console.log("remote audio");
+          } else {
+            console.log("remote video");
+          }
+        });
+      };
     });
 
     socket.on("sdp-answer", async ({ sdp, roomId }) => {

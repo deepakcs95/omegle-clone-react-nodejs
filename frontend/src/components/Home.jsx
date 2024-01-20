@@ -7,6 +7,7 @@ const Home = () => {
   const [join, setJoin] = useState(false);
   const [audioTrack, setAudioTrack] = useState(null);
   const [videoTrack, setVideoTrack] = useState(null);
+  const [localStream, setStream] = useState(null);
   const videoRef = useRef(null);
 
   const getCameraPersmission = async () => {
@@ -29,6 +30,7 @@ const Home = () => {
     videoRef.current.srcObject = new MediaStream([video]);
 
     setMedia(true);
+    setStream(stream);
   };
 
   useEffect(() => {
@@ -56,6 +58,13 @@ const Home = () => {
       </div>
     );
   }
-  return <Room localName={name} localAudioTrack={audioTrack} localVideoTrack={videoTrack} />;
+  return (
+    <Room
+      localName={name}
+      localStream={localStream}
+      localAudioTrack={audioTrack}
+      localVideoTrack={videoTrack}
+    />
+  );
 };
 export default Home;
