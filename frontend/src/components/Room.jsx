@@ -1,9 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import io from "socket.io-client";
 
 const Room = ({ localName, localStream, localAudioTrack, localVideoTrack }) => {
   const [senderPC, setSenderPC] = useState(null);
   const [recieverPC, setRecieverPC] = useState(null);
+
+  const [remoteUserName, setRemoteName] = useState("remote");
+
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
 
   useEffect(() => {
     const socket = io("http://localhost:3000");
@@ -52,8 +57,10 @@ const Room = ({ localName, localStream, localAudioTrack, localVideoTrack }) => {
       pc.onconnectionstatechange = (e) => console.log(e.currentTarget.connectionState);
     });
 
-    socket.on("sdp-offer", async ({ sdp, roomId }) => {
+    socket.on("sdp-offer", async ({ sdp, roomId, remoteName }) => {
       console.log("offer sdp recived ", localName);
+      setRemoteName(remoteName);
+
       const pc = new RTCPeerConnection();
       pc.setRemoteDescription(sdp);
       const answer = await pc.createAnswer();
@@ -70,19 +77,19 @@ const Room = ({ localName, localStream, localAudioTrack, localVideoTrack }) => {
         socket.emit("add-ice-candidate", { candidate: e.candidate, roomId, type: "receiver" });
       };
 
-      pc.ontrack = (e) => {
-        console.log("track recivived");
-      };
-
       pc.onconnectionstatechange = (e) => {
         console.log("remote", e.currentTarget.connectionState);
+        const stream = new MediaStream();
         pc.getTransceivers().forEach((tranceiver) => {
+          stream.addTrack(tranceiver.receiver.track);
           if (tranceiver.receiver.track.kind === "audio") {
             console.log("remote audio");
           } else {
             console.log("remote video");
           }
         });
+        console.log(stream);
+        remoteVideoRef.current.srcObject = stream;
       };
     });
 
@@ -110,6 +117,25 @@ const Room = ({ localName, localStream, localAudioTrack, localVideoTrack }) => {
     });
   }, [localName]);
 
-  return <div>Room</div>;
+  useEffect(() => {
+    if (localVideoRef.current) {
+      if (localStream) {
+        localVideoRef.current.srcObject = new MediaStream([localStream.getVideoTracks()[0]]);
+      }
+    }
+  }, [localVideoRef]);
+
+  return (
+    <div className="w-full h-full flex items-center border">
+      <div className="w-[50%] h-[400px] grid place-content-center">
+        <video autoPlay ref={localVideoRef}></video>
+        <p>{localName}</p>
+      </div>
+      <div className="w-[50%] h-[400px] grid place-content-center">
+        <video autoPlay ref={remoteVideoRef}></video>
+        <span>{remoteUserName}</span>
+      </div>
+    </div>
+  );
 };
 export default Room;

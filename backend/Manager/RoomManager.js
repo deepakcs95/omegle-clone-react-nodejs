@@ -22,9 +22,11 @@ export default class RoomManager {
     if (!room) return;
 
     const recieverSocket = room.user1.socket.id === senderSocketId.id ? room.user2 : room.user1;
+    const senderName =
+      room.user1.socket.id === senderSocketId.id ? room.user1.name : room.user2.name;
     console.log("offer ", recieverSocket.name, recieverSocket.socket.id, senderSocketId.id);
 
-    recieverSocket?.socket.emit("sdp-offer", { sdp, roomId });
+    recieverSocket?.socket.emit("sdp-offer", { sdp, roomId, remoteName: senderName });
   }
   onAnswer(roomId, sdp, senderSocketId) {
     const room = this.room.get(roomId);
