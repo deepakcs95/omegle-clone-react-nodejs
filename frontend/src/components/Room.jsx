@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import io, { Socket } from "socket.io-client";
 import Peer from "peerjs";
 
-const URL = import.meta.env.URL;
+const URL = import.meta.env.VITE_BACKEND_URL;
 
 const Room = ({ localName, localStream, localAudioTrack, localVideoTrack }) => {
   const localVideoRef = useRef(null);
