@@ -12,6 +12,7 @@ export default class UserManager {
     this.queue.push(socket.id);
     this.initHandlers(socket);
     this.clearQueue();
+    console.log(this.queue);
   }
 
   clearQueue() {
@@ -48,6 +49,11 @@ export default class UserManager {
 
     socket.on("add-ice-candidate", ({ candidate, roomId, type }) => {
       this.room.onIceCandidates(roomId, candidate, type, socket);
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("user is disconnect ", socket.id);
+      this.room.onDisconnect(socket.id);
     });
   }
 }

@@ -19,10 +19,6 @@ io.on("connection", (socket) => {
   socket.on("join", ({ name }) => {
     userManager.addUser(name, socket);
   });
-
-  socket.on("disconnect", (reason) => {
-    console.log("user is disconnect ", socket.id);
-  });
 });
 
 io.listen(3000);

@@ -34,7 +34,7 @@ export default class RoomManager {
     if (!room) return;
 
     const recieverSocket = room.user1.socket.id === senderSocketId.id ? room.user2 : room.user1;
-    console.log("answer ", recieverSocket.name, recieverSocket.socket.id, senderSocketId.id);
+    // console.log("answer ", recieverSocket.name, recieverSocket.socket.id, senderSocketId.id);
 
     recieverSocket?.socket.emit("sdp-answer", { sdp, roomId });
   }
@@ -44,17 +44,33 @@ export default class RoomManager {
     if (!room) return;
 
     const recieverSocket = room.user1.socket.id === senderSocketId.id ? room.user2 : room.user1;
-    console.log("ice cand ", recieverSocket.name, recieverSocket.socket.id, senderSocketId.id);
+    // console.log("ice cand ", recieverSocket.name, recieverSocket.socket.id, senderSocketId.id);
 
     recieverSocket?.socket.emit("ice-candidate", { candidate, type, roomId });
   }
 
-  onNegotiationNeeded(roomId, senderSocketId) {
+  onDisconnect(senderSocketId) {
+    const roomId = this.findRoomIdByUser1SocketId(this.room, senderSocketId);
     const room = this.room.get(roomId);
 
     if (!room) return;
 
-    room.user1?.socket.emit("send-offer", { roomId });
+    const recieverSocket = room.user1.socket.id === senderSocketId ? room.user2 : room.user1;
+    this.room.delete(room);
+    recieverSocket?.socket.emit("lobby");
+  }
+
+  findRoomIdByUser1SocketId(map, targetSocketId) {
+    for (const [roomId, users] of this.room.entries()) {
+      if (
+        (users.user1 && users.user1.socket && users.user1.socket.id === targetSocketId) ||
+        (users.user2 && users.user1.socket && users.user2.socket.id === targetSocketId)
+      ) {
+        return roomId;
+      }
+    }
+    // Return null or a specific value if no match is found
+    return null;
   }
 
   generateRoomId() {

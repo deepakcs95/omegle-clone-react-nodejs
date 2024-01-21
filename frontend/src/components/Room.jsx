@@ -6,6 +6,8 @@ const Room = ({ localName, localStream, localAudioTrack, localVideoTrack }) => {
   const [recieverPC, setRecieverPC] = useState(null);
 
   const [remoteUserName, setRemoteName] = useState("remote");
+  const [remoteStream, setRemotStream] = useState(null);
+  const [lobby, setLobby] = useState(false);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -15,22 +17,19 @@ const Room = ({ localName, localStream, localAudioTrack, localVideoTrack }) => {
 
     socket.emit("join", { name: localName });
 
+    socket.on("lobby", () => {
+      setLobby(false);
+      setRecieverPC(null);
+      setSenderPC(null);
+      socket.emit("join", { name: localName });
+    });
+
     socket.on("start-peerconnection", async ({ roomId, name }) => {
       console.log("start-peerconnection", roomId, name);
 
       const pc = new RTCPeerConnection();
 
       setSenderPC(pc);
-      // if (localVideoTrack) {
-      //   console.error("video tack");
-      //   //  console.log(localVideoTrack);
-      //   pc.addTrack(localVideoTrack);
-      // }
-      // if (localAudioTrack) {
-      //   console.error("audio tack");
-      //   //  console.log(localAudioTrack);
-      //   pc.addTrack(localAudioTrack);
-      // }
 
       localStream.getTracks().forEach(function (track) {
         console.log(track);
@@ -79,17 +78,24 @@ const Room = ({ localName, localStream, localAudioTrack, localVideoTrack }) => {
 
       pc.onconnectionstatechange = (e) => {
         console.log("remote", e.currentTarget.connectionState);
-        const stream = new MediaStream();
-        pc.getTransceivers().forEach((tranceiver) => {
-          stream.addTrack(tranceiver.receiver.track);
-          if (tranceiver.receiver.track.kind === "audio") {
-            console.log("remote audio");
-          } else {
-            console.log("remote video");
-          }
-        });
-        console.log(stream);
-        remoteVideoRef.current.srcObject = stream;
+        if (e.currentTarget.connectionState === "connected") {
+          const stream = new MediaStream();
+          pc.getTransceivers().forEach((tranceiver) => {
+            stream.addTrack(tranceiver.receiver.track);
+            if (tranceiver.receiver.track.kind === "audio") {
+              console.log("remote audio");
+            } else {
+              console.log("remote video");
+            }
+          });
+          console.log(stream);
+          setRemotStream(stream);
+          setLobby(true);
+        }
+
+        if (e.currentTarget.connectionState === "disconnected") {
+          setLobby(false);
+        }
       };
     });
 
@@ -125,16 +131,28 @@ const Room = ({ localName, localStream, localAudioTrack, localVideoTrack }) => {
     }
   }, [localVideoRef]);
 
+  useEffect(() => {
+    if (remoteVideoRef.current) {
+      if (remoteStream) {
+        remoteVideoRef.current.srcObject = remoteStream;
+      }
+    }
+  }, [remoteStream]);
+
   return (
     <div className="w-full h-full flex items-center border">
       <div className="w-[50%] h-[400px] grid place-content-center">
         <video autoPlay ref={localVideoRef}></video>
         <p>{localName}</p>
       </div>
-      <div className="w-[50%] h-[400px] grid place-content-center">
-        <video autoPlay ref={remoteVideoRef}></video>
-        <span>{remoteUserName}</span>
-      </div>
+      {lobby ? (
+        <div className="w-[50%] h-[400px] grid place-content-center">
+          <video autoPlay ref={remoteVideoRef}></video>
+          <span>{remoteUserName}</span>
+        </div>
+      ) : (
+        <h1>waiting for user to join</h1>
+      )}
     </div>
   );
 };
