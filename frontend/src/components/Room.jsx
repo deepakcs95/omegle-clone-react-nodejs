@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import io, { Socket } from "socket.io-client";
 import Peer from "peerjs";
 
+const URL = import.meta.env.URL;
+
 const Room = ({ localName, localStream, localAudioTrack, localVideoTrack }) => {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -12,7 +14,7 @@ const Room = ({ localName, localStream, localAudioTrack, localVideoTrack }) => {
   const [remoteUserName, setRemoteName] = useState("");
 
   useEffect(() => {
-    const socket = io("http://localhost:3000");
+    const socket = io(URL);
 
     const peer = new Peer();
 
