@@ -1,159 +1,102 @@
-import { useEffect, useRef, useState } from "react";
-import io from "socket.io-client";
+import { useCallback, useEffect, useRef, useState } from "react";
+import io, { Socket } from "socket.io-client";
+import Peer from "peerjs";
 
 const Room = ({ localName, localStream, localAudioTrack, localVideoTrack }) => {
-  const [senderPC, setSenderPC] = useState(null);
-  const [recieverPC, setRecieverPC] = useState(null);
-
-  const [remoteUserName, setRemoteName] = useState("remote");
-  const [remoteStream, setRemotStream] = useState(null);
-  const [lobby, setLobby] = useState(false);
-
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+
+  const [lobby, setLobby] = useState(false);
+  const [peerId, setPeerID] = useState("");
+  const [remoteStream, setRemoteStream] = useState(null);
+  const [remoteUserName, setRemoteName] = useState("");
 
   useEffect(() => {
     const socket = io("http://localhost:3000");
 
-    socket.emit("join", { name: localName });
+    const peer = new Peer();
 
-    socket.on("lobby", () => {
+    peer.on("open", (id) => {
+      setPeerID(id);
+      console.log(id);
+      socket.emit("join", { name: localName, peerId: id });
+    });
+
+    socket.on("user-joined-room", ({ roomId, name, peerId }) => {
+      console.log("user-joined-room", roomId, name, peerId);
+      setRemoteName(name);
+      setLobby(true);
+    });
+
+    socket.on("call", ({ roomId, peerId }) => {
+      console.log("user calling");
+
+      const call = peer.call(peerId, localStream);
+      call.on("stream", (stream) => {
+        // Show stream in some video/canvas element.
+        setRemoteStream(() => stream);
+        setLobby(true);
+        console.log("asnwered user stream", stream);
+      });
+    });
+
+    peer.on("call", (call) => {
+      call.answer(localStream); // Answer the call with an A/V stream.
+      call.on("stream", (stream) => {
+        // Show stream in some video/canvas element.
+        console.log("called user stream ", stream.getVideoTracks());
+        setRemoteStream(() => stream);
+        setLobby(true);
+      });
+    });
+
+    socket.on("rejoin", () => {
+      console.log("REJOIN");
+      socket.emit("join", { name: localName, peerId });
       setLobby(false);
-      setRecieverPC(null);
-      setSenderPC(null);
-      socket.emit("join", { name: localName });
-    });
-
-    socket.on("start-peerconnection", async ({ roomId, name }) => {
-      console.log("start-peerconnection", roomId, name);
-
-      const pc = new RTCPeerConnection();
-
-      setSenderPC(pc);
-
-      localStream.getTracks().forEach(function (track) {
-        console.log(track);
-        pc.addTrack(track, localStream);
-      });
-
-      pc.onicecandidate = (e) => {
-        if (!e.candidate) {
-          return;
-        }
-        console.log("sending ice candidate ", localName);
-        socket.emit("add-ice-candidate", { candidate: e.candidate, roomId, type: "sender" });
-      };
-
-      pc.onnegotiationneeded = async () => {
-        console.log("negotiantion needed for ", localName);
-        const sdp = await pc.createOffer();
-        console.log("created sdp offer ", localName);
-        pc.setLocalDescription(sdp);
-
-        socket.emit("offer", { sdp, roomId });
-      };
-
-      pc.onconnectionstatechange = (e) => console.log(e.currentTarget.connectionState);
-    });
-
-    socket.on("sdp-offer", async ({ sdp, roomId, remoteName }) => {
-      console.log("offer sdp recived ", localName);
-      setRemoteName(remoteName);
-
-      const pc = new RTCPeerConnection();
-      pc.setRemoteDescription(sdp);
-      const answer = await pc.createAnswer();
-      pc.setLocalDescription(answer);
-
-      setRecieverPC(pc);
-      socket.emit("answer", { sdp: answer, roomId });
-
-      pc.onicecandidate = (e) => {
-        if (!e.candidate) {
-          return;
-        }
-        console.log("sending ice candidate ", localName);
-        socket.emit("add-ice-candidate", { candidate: e.candidate, roomId, type: "receiver" });
-      };
-
-      pc.onconnectionstatechange = (e) => {
-        console.log("remote", e.currentTarget.connectionState);
-        if (e.currentTarget.connectionState === "connected") {
-          const stream = new MediaStream();
-          pc.getTransceivers().forEach((tranceiver) => {
-            stream.addTrack(tranceiver.receiver.track);
-            if (tranceiver.receiver.track.kind === "audio") {
-              console.log("remote audio");
-            } else {
-              console.log("remote video");
-            }
-          });
-          console.log(stream);
-          setRemotStream(stream);
-          setLobby(true);
-        }
-
-        if (e.currentTarget.connectionState === "disconnected") {
-          setLobby(false);
-        }
-      };
-    });
-
-    socket.on("sdp-answer", async ({ sdp, roomId }) => {
-      console.log("answer sdp recived ", localName);
-      setSenderPC((peerConnection) => {
-        peerConnection?.setRemoteDescription(sdp);
-        return peerConnection;
-      });
-    });
-
-    socket.on("ice-candidate", ({ candidate, type, roomId }) => {
-      console.log("adding ice candidate ", type);
-      if (type === "sender") {
-        setRecieverPC((peerConnection) => {
-          peerConnection?.addIceCandidate(new RTCIceCandidate(candidate));
-          return peerConnection;
-        });
-      } else {
-        setSenderPC((peerConnection) => {
-          peerConnection?.addIceCandidate(new RTCIceCandidate(candidate));
-          return peerConnection;
-        });
-      }
+      setRemoteStream(null);
+      setRemoteName("");
     });
   }, [localName]);
 
   useEffect(() => {
     if (localVideoRef.current) {
-      if (localStream) {
-        localVideoRef.current.srcObject = new MediaStream([localStream.getVideoTracks()[0]]);
-      }
+      localVideoRef.current.srcObject = localStream;
     }
-  }, [localVideoRef]);
+  }, [localStream]);
 
   useEffect(() => {
     if (remoteVideoRef.current) {
-      if (remoteStream) {
-        remoteVideoRef.current.srcObject = remoteStream;
-      }
+      remoteVideoRef.current.srcObject = remoteStream;
     }
   }, [remoteStream]);
 
   return (
-    <div className="w-full h-full flex items-center border  text-white">
-      <div className=" w-[50%] h-[400px] grid place-content-center">
-        <video className=" w-full  border border-red-500" autoPlay ref={localVideoRef} />
-        <p className="absolute bottom-0 left-0 p-3 bg-black  rounded-sm  ">{localName}</p>
-      </div>
-      {lobby ? (
-        <div className="w-[50%] h-[400px] grid place-content-center">
-          <video autoPlay ref={remoteVideoRef}></video>
-          <span>{remoteUserName}</span>
+    <>
+      <div className=" lg:max-w-[70%]     grid grid-cols-2 ">
+        <div className="grid place-items-center ">
+          <video autoPlay ref={localVideoRef} />
+          <p className="  p-3 rounded-sm bg-neutral  ">{localName}</p>
         </div>
-      ) : (
-        <h1>waiting for user to join</h1>
-      )}
-    </div>
+
+        {lobby ? (
+          <div className="grid place-items-center">
+            <video className="    " autoPlay ref={remoteVideoRef} />
+            <p className="   p-3 rounded-sm bg-neutral  ">{remoteUserName}</p>
+          </div>
+        ) : (
+          <div className="relative relativew-[50%] h-[400px] flex flex-col items-center justify-center text-primary">
+            <span className="block loading loading-infinity loading-lg "></span>
+            <h1>waiting for user to join</h1>
+          </div>
+        )}
+      </div>
+      {/* {lobby ? (
+        <button className="btn btn-primary " onClick={() => handleNextUser()}>
+          Try Next User
+        </button>
+      ) : null} */}
+    </>
   );
 };
 export default Room;

@@ -7,8 +7,8 @@ export default class UserManager {
     this.room = new RoomManager();
   }
 
-  addUser(name, socket) {
-    this.users.push({ name, socket });
+  addUser(name, peerId, socket) {
+    this.users.push({ name, peerId, socket });
     this.queue.push(socket.id);
     this.initHandlers(socket);
     this.clearQueue();
@@ -32,28 +32,18 @@ export default class UserManager {
     console.log("creating room");
 
     this.room.createRoom(user1, user2);
-    this.clearQueue();
+    // this.clearQueue();
   }
 
   initHandlers(socket) {
-    socket.on("on-negotiation-needed", ({ roomId }) => {
-      this.room.onNegotiationNeeded(roomId, socket);
-    });
-    socket.on("offer", ({ sdp, roomId }) => {
-      this.room.onOffer(roomId, sdp, socket);
-    });
-
-    socket.on("answer", ({ sdp, roomId }) => {
-      this.room.onAnswer(roomId, sdp, socket);
-    });
-
-    socket.on("add-ice-candidate", ({ candidate, roomId, type }) => {
-      this.room.onIceCandidates(roomId, candidate, type, socket);
-    });
-
     socket.on("disconnect", (reason) => {
       console.log("user is disconnect ", socket.id);
       this.room.onDisconnect(socket.id);
+    });
+    socket.on("roomId", (roomId) => {
+      console.log("next user ", socket.id);
+
+      this.room.onNextUser(socket.id);
     });
   }
 }

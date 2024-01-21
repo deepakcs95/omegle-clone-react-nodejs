@@ -10,17 +10,12 @@ const io = new Server({
 const userManager = new UserManager();
 
 io.on("connection", (socket) => {
-  console.log("user is connected ", socket.id);
-  socket.on("test", () => {
-    socket.emit("socket", socket.id);
-    userManager.addUser("newUser", socket);
-  });
-
-  socket.on("join", ({ name }) => {
-    userManager.addUser(name, socket);
+  console.log("a user is connected ");
+  socket.on("join", ({ name, peerId }) => {
+    userManager.addUser(name, peerId, socket);
   });
 });
 
 io.listen(3000);
 
-console.log("io is running");
+console.log("io is running ,");

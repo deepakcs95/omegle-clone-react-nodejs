@@ -13,51 +13,34 @@ export default class RoomManager {
     const name2 = user2.name;
 
     console.log(name1, name2);
-    user1.socket.emit("start-peerconnection", { roomId, name: name2 });
-    user2.socket.emit("start-peerconnection", { roomId, name: name1 });
-  }
-
-  onOffer(roomId, sdp, senderSocketId) {
-    const room = this.room.get(roomId);
-    if (!room) return;
-
-    const recieverSocket = room.user1.socket.id === senderSocketId.id ? room.user2 : room.user1;
-    const senderName =
-      room.user1.socket.id === senderSocketId.id ? room.user1.name : room.user2.name;
-    console.log("offer ", recieverSocket.name, recieverSocket.socket.id, senderSocketId.id);
-
-    recieverSocket?.socket.emit("sdp-offer", { sdp, roomId, remoteName: senderName });
-  }
-  onAnswer(roomId, sdp, senderSocketId) {
-    const room = this.room.get(roomId);
-
-    if (!room) return;
-
-    const recieverSocket = room.user1.socket.id === senderSocketId.id ? room.user2 : room.user1;
-    // console.log("answer ", recieverSocket.name, recieverSocket.socket.id, senderSocketId.id);
-
-    recieverSocket?.socket.emit("sdp-answer", { sdp, roomId });
-  }
-  onIceCandidates(roomId, candidate, type, senderSocketId) {
-    const room = this.room.get(roomId);
-
-    if (!room) return;
-
-    const recieverSocket = room.user1.socket.id === senderSocketId.id ? room.user2 : room.user1;
-    // console.log("ice cand ", recieverSocket.name, recieverSocket.socket.id, senderSocketId.id);
-
-    recieverSocket?.socket.emit("ice-candidate", { candidate, type, roomId });
+    user1.socket.join(roomId);
+    user2.socket.join(roomId);
+    console.log(user1.peerId, user2.peerId);
+    user1.socket.broadcast
+      .to(roomId)
+      .emit("user-joined-room", { roomId, name: user1.name, peerId: user1.peerId });
+    user2.socket.broadcast
+      .to(roomId)
+      .emit("user-joined-room", { roomId, name: user2.name, peerId: user2.peerId });
+    user2.socket.broadcast.to(roomId).emit("call", { roomId, peerId: user2.peerId });
   }
 
   onDisconnect(senderSocketId) {
     const roomId = this.findRoomIdByUser1SocketId(this.room, senderSocketId);
     const room = this.room.get(roomId);
-
     if (!room) return;
 
     const recieverSocket = room.user1.socket.id === senderSocketId ? room.user2 : room.user1;
-    this.room.delete(room);
-    recieverSocket?.socket.emit("lobby");
+    this.room.delete(roomId);
+    recieverSocket?.socket.emit("rejoin");
+  }
+
+  onNextUser(roomId) {
+    const room = this.room.get(roomId);
+    console.log(room);
+    if (!room) return;
+    console.log(room.user1.name, room.user2.name);
+    room.user1.socket.to(roomId).emit("rejoin");
   }
 
   findRoomIdByUser1SocketId(map, targetSocketId) {
