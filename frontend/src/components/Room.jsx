@@ -140,10 +140,10 @@ const Room = ({ localName, localStream, localAudioTrack, localVideoTrack }) => {
   }, [remoteStream]);
 
   return (
-    <div className="w-full h-full flex items-center border">
-      <div className="w-[50%] h-[400px] grid place-content-center">
-        <video autoPlay ref={localVideoRef}></video>
-        <p>{localName}</p>
+    <div className="w-full h-full flex items-center border  text-white">
+      <div className=" w-[50%] h-[400px] grid place-content-center">
+        <video className=" w-full  border border-red-500" autoPlay ref={localVideoRef} />
+        <p className="absolute bottom-0 left-0 p-3 bg-black  rounded-sm  ">{localName}</p>
       </div>
       {lobby ? (
         <div className="w-[50%] h-[400px] grid place-content-center">

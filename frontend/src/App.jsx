@@ -1,10 +1,12 @@
 import { useState } from "react";
 import Home from "./components/Home";
+import Header from "./components/Header";
 
 function App() {
   return (
     <>
-      <div className="w-full min-h-screen grid place-items-center">
+      <div className="relative w-full min-h-screen flex flex-col items-center  justify-center   ">
+        <Header />
         <Home />
       </div>
     </>
