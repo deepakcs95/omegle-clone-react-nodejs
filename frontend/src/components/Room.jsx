@@ -15,12 +15,15 @@ const Room = ({ localName, localStream, localAudioTrack, localVideoTrack }) => {
 
   useEffect(() => {
     const socket = io(URL);
+    console.log(URL);
 
     const peer = new Peer();
 
+    console.log(socket);
     peer.on("open", (id) => {
       setPeerID(id);
       console.log(id);
+      console.log(socket);
       socket.emit("join", { name: localName, peerId: id });
     });
 

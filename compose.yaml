@@ -1,0 +1,15 @@
+version: "3"
+services:
+  backend:
+    image: deeoakcs/omegle-backend
+    container_name: backend
+    ports:
+      - "3000:3000"
+
+  frontend:
+    image: deeoakcs/omegle-frontend
+    container_name: frontend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - backend
